@@ -93,33 +93,48 @@
     <p id="result"></p>
   </div>
 
-  <script>
+ <script>
   const form = document.getElementById("myForm");
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
+
     const message = document.getElementById("messageInput").value;
+    const resultBox = document.getElementById("result");
+    resultBox.textContent = "⏳ Processing...";
 
     try {
-      const response = await fetch("https://script.google.com/macros/s/AKfycbwpxaL2_vfkE1x-fXxCsVroshIvGe6bfYxF1M1bpE7eE0tmu4aztkJ68gEnBQoMAPlW/exec", {
-        method: "POST",
-        headers: {
-          "Content-Type": "text/plain"
-        },
-        body: JSON.stringify({ message }),
-        redirect: "follow"
-      });
+      const response = await fetch(
+        "https://script.google.com/macros/s/AKfycbysQuTNMcE8x9ym5ajeDXU8U4OWzEy1WBY58wV467flGFU7KlBuRGbfRNGwUGT77g38/exec",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "text/plain"
+          },
+          body: JSON.stringify({ message }),
+        }
+      );
 
       const text = await response.text();
-      document.getElementById("result").textContent = text;
+
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status}: ${text}`);
+      }
+
+      resultBox.innerHTML = text
+        .split('\n')
+        .map(line => `<div>✅ ${line}</div>`)
+        .join('');
     } catch (err) {
-      console.error("Error:", err);
-      document.getElementById("result").textContent = "❌ Submission failed.";
+      console.error("Error during fetch:", err);
+      resultBox.textContent = `❌ ${err.message || err}`;
     }
 
     form.reset();
   });
 </script>
+
+
 
 </body>
 </html>
