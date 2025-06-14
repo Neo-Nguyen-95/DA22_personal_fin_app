@@ -59,7 +59,7 @@ A smart personal spending tracker powered by OpenAI and Google Apps Script — d
    - Edit `index.html`
    - Replace the script URL with your Web App endpoint
 
-3. ** Host with GitHub Pages:**
+3. **Host with GitHub Pages:**
    - Make your repo public if needed
    - Enable GitHub Pages on `main` or `/docs`
 
