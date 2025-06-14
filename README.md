@@ -4,8 +4,6 @@
 
 A smart personal spending tracker powered by OpenAI and Google Apps Script — designed to turn your natural language notes into structured financial records in Google Sheets.
 
-![demo screenshot](./screenshot.png) <!-- optional -->
-
 ---
 
 ## ✨ Features
