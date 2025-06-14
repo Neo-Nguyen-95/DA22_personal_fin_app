@@ -1,0 +1,9 @@
+### SUCCESS v1
+function doPost(e) {
+  try {
+    const raw = e.postData.contents;
+    return ContentService.createTextOutput("Server received: " + raw);
+  } catch (err) {
+    return ContentService.createTextOutput("Error: " + err.message);
+  }
+}
