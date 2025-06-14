@@ -1,20 +1,24 @@
 const SHEET_ID = '...';
-const SHEET_NAME = 'Sheet1'; // Change if your sheet tab name is different
+const SHEET_NAME = 'Sheet1'; // Change if your sheet has a different name
 
 function doPost(e) {
   try {
-    // get data from front-end
     const payload = JSON.parse(e.postData.contents);
-    const originalMessage = payload.message;
-    const processedMessage = addKtoSmallNumbers(originalMessage);
+    const originalMessage = payload.message || '';
     const timestamp = new Date();
 
-    // Append to Google Sheet
+    // Break message into lines (handles both \n and \r\n)
+    const lines = originalMessage.split(/\r?\n/).map(line => line.trim()).filter(line => line);
+
     const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(SHEET_NAME);
-    sheet.appendRow([timestamp, originalMessage, processedMessage]);
+
+    lines.forEach(line => {
+      const processed = addKtoSmallNumbers(line);
+      sheet.appendRow([timestamp, line, processed]);
+    });
 
     return ContentService
-      .createTextOutput(processedMessage)
+      .createTextOutput(`✅ Processed ${lines.length} line(s).`)
       .setMimeType(ContentService.MimeType.TEXT);
 
   } catch (err) {
