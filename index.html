@@ -1,11 +1,35 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>My GitHub Page</title>
+  <title>Form to Google Sheet</title>
 </head>
 <body>
-  <h1>Hello from GitHub Pages!</h1>
-  <p>This page is hosted for free on GitHub.</p>
+  <h2>Send Your Name</h2>
+  <form id="dataForm">
+    <input type="text" name="name" id="name" placeholder="Enter your name" required>
+    <button type="submit">Submit</button>
+  </form>
+
+  <p id="response"></p>
+
+  <script>
+    const form = document.getElementById('dataForm');
+    form.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const name = document.getElementById('name').value;
+
+      const response = await fetch("YOUR_APPS_SCRIPT_URL", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ name })
+      });
+
+      const result = await response.text();
+      document.getElementById('response').innerText = result;
+      form.reset();
+    });
+  </script>
 </body>
 </html>
