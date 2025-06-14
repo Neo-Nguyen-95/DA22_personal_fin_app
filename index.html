@@ -81,11 +81,27 @@
       min-height: 1.5rem;
       white-space: pre-wrap;
     }
+    
+    .icon-row {
+      display: flex;
+      justify-content: center;
+      gap: 1.2rem;
+      margin-bottom: 1.5rem;
+    }
+    
+    .icon {
+      font-size: 2rem;
+    }
   </style>
 </head>
 <body>
   <div class="card">
     <h2>Personal Finance App</h2>
+    <div class="icon-row">
+      <span class="icon">🐷</span>
+      <span class="icon">🦄</span>
+      <span class="icon">🍉</span>
+    </div>
     <form id="myForm">
       <textarea id="messageInput" placeholder="Type your message..." required></textarea>
       <button type="submit">Submit</button>
