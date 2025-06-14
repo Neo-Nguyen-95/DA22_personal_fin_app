@@ -27,7 +27,7 @@ A smart personal spending tracker powered by OpenAI and Google Apps Script — d
 
 - Takes multi-line input (one entry per line)
 - Sends to Google Apps Script via `fetch()`
-- Displays result feedback (`✅ 3 processed, ❌ 1 failed`)
+- Displays result feedback
 
 ### 2. Google Apps Script (Backend)
 
@@ -59,7 +59,7 @@ A smart personal spending tracker powered by OpenAI and Google Apps Script — d
    - Edit `index.html`
    - Replace the script URL with your Web App endpoint
 
-3. **(Optional) Host with GitHub Pages:**
+3. ** Host with GitHub Pages:**
    - Make your repo public if needed
    - Enable GitHub Pages on `main` or `/docs`
 
@@ -82,11 +82,9 @@ Lương tháng 6: 12tr
 
 ## 📄 File Structure
 
-├── index.html # Frontend UI
-
-├── README.md
-
-├── Code.gs # Google Apps Script backend
+- index.html # Frontend UI
+- README.md
+- Code.gs # Google Apps Script backend
 
 ---
 
@@ -103,9 +101,4 @@ Lương tháng 6: 12tr
 
 Developed by Neo Nguyen  
 Icons: 🐷 🦄 🍉 (Pig, Unicorn, Watermelon) represent my family 🎉
-
----
-
-## 📜 License
-
-MIT — free to use, modify, and improve.
+Free to reuse (without my private data :D ).
