@@ -81,13 +81,9 @@ Lương tháng 6: 12tr
 ---
 
 ## 📄 File Structure
-
-/
 ├── index.html # Frontend UI
 ├── README.md
 ├── Code.gs # Google Apps Script backend
-└── (optional) screenshot.png
-
 
 ---
 
