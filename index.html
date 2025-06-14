@@ -98,15 +98,15 @@
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const name = document.getElementById("messageInput").value;
+    const message = document.getElementById("messageInput").value;
 
     try {
-      const response = await fetch("https://script.google.com/macros/s/AKfycbxzAhCJHeXuHljE0GZhKvFoEZwL-lf0RpcQHqI9ZxhZSTsXgFBWIokfDsjfbXK_uqwL/exec", {
+      const response = await fetch("https://script.google.com/macros/s/AKfycbyOtyRqWFvPkspujLQwjPWdNp93u5iMgiuzvY9QgDXx1MF-voVJS-nmX59bfI9nv5Sn/exec", {
         method: "POST",
         headers: {
           "Content-Type": "text/plain"
         },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ message }),
         redirect: "follow"
       });
 
