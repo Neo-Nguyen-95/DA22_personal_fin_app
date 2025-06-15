@@ -94,14 +94,47 @@
       font-size: 2rem;
     }
 
+    /* --- preview table look --- */
+    .tableWrap { position: relative; overflow: visible; }
+
+    /* base table look */
     #previewTable {
-      width:100%; border-collapse:collapse; margin-bottom:1rem;
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 1rem;
     }
-    #previewTable th, #previewTable td {
-      border:1px solid #ddd; padding:4px 6px; font-size:0.9rem;
+    #previewTable th,
+    #previewTable td {
+      border: 1px solid #ddd;
+      padding: 4px 6px;
+      font-size: 0.9rem;
     }
-    #previewTable tr.failed { background:#fee; color:#b00; }
-    #confirmBtn { margin-top:0.5rem; }
+
+    /* ----- Delete-button column ----- */
+    #previewTable td.action {           /* blank cell that hosts the button */
+      border: none;
+      padding: 0;
+      position: relative;
+    }
+
+    #previewTable .del {                /* transparent, black edge */
+      position: absolute;
+      right: -36px;                     /* hangs outside the table */
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+      border: 1px solid #000;
+      color: #000;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+
+    #previewTable tr.failed { background: #fee; color: #b00; }
+    #confirmBtn { margin-top: 0.5rem; }
+
+
 
   </style>
 </head>
@@ -121,9 +154,12 @@
 
     <div id="previewBox" hidden>
       <h3>Preview</h3>
-      <table id="previewTable"></table>
+      <div class="tableWrap">
+        <table id="previewTable"></table>
+      </div>
       <button id="confirmBtn">✅ Save to Sheet</button>
     </div>
+
 
   </div>
 
@@ -179,36 +215,48 @@ confirmBtn.addEventListener('click', async () => {
 function buildPreviewTable(rows, failed) {
   previewTbl.innerHTML = '';
 
-  // only these columns + an Action column
-  const header = ['raw','who','date','amount',''];   // last '' → Action
-  previewTbl.insertAdjacentHTML('beforeend',
-    `<tr>${header.map(h=>`<th>${h}</th>`).join('')}</tr>`);
+  /* header row (note the extra blank <th>) */
+  const header = ['raw', 'who', 'date', 'amount'];
+  previewTbl.insertAdjacentHTML(
+    'beforeend',
+    `<tr>
+       ${header.map(h => `<th>${h}</th>`).join('')}
+       <th style="border:none"></th>
+     </tr>`
+  );
 
-  // good rows
+  /* successful parses */
   rows.forEach(obj => {
-    const cells = [
-      obj.raw, obj.who, obj.date, obj.amount.toLocaleString('vi-VN')
+    const dataCells = [
+      obj.raw,
+      obj.who,
+      obj.date,
+      obj.amount.toLocaleString('vi-VN')
     ].map(v => `<td>${v}</td>`).join('');
-    previewTbl.insertAdjacentHTML('beforeend',
+
+    previewTbl.insertAdjacentHTML(
+      'beforeend',
       `<tr data-raw="${obj.raw}">
-         ${cells}
-         <td><button class="del">❌ Delete</button></td>
-       </tr>`);
+         ${dataCells}
+         <td class="action"><button class="del">❌</button></td>
+       </tr>`
+    );
   });
 
-  // failures (span the table width)
-  failed.forEach(({line,reason})=>{
-    previewTbl.insertAdjacentHTML('beforeend',
-      `<tr class="failed"><td colspan="5">❌ ${line} — ${reason}</td></tr>`);
+  /* failures */
+  failed.forEach(({ line, reason }) => {
+    previewTbl.insertAdjacentHTML(
+      'beforeend',
+      `<tr class="failed"><td colspan="5">❌ ${line} — ${reason}</td></tr>`
+    );
   });
 
-  // wire up delete buttons
-  previewTbl.querySelectorAll('button.del').forEach(btn=>{
-    btn.addEventListener('click', () => {
-      btn.closest('tr').remove();
-    });
+  /* wire up delete buttons */
+  previewTbl.querySelectorAll('button.del').forEach(btn => {
+    btn.addEventListener('click', () => btn.closest('tr').remove());
   });
 }
+
 
 /* ---------- HELPER: FETCH WRAPPER ---------- */
 async function fetchJSON(message, mode){
