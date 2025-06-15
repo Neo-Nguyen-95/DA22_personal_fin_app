@@ -1,0 +1,145 @@
+/* =========  CONFIG  ========= */
+const SHEET_ID   = 'YOUR_GOOGLESHEET_ID';
+const SHEET_NAME = 'SHEET_NAME';
+const OPENAI_API_KEY = PropertiesService.getScriptProperties().getProperty('OPENAI_API_KEY');  // Save it in the app property
+
+/* =========  ENTRYPOINT  ========= */
+function doPost(e) {
+  const result = { inserted: 0, preview: [], failed: [] };
+
+  try {
+    const body = JSON.parse(e.postData.contents || '{}');
+    const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName(SHEET_NAME);
+
+    /* ---------- 1) DIRECT-WRITE mode ---------- */
+    if (Array.isArray(body.entries)) {
+      body.entries.forEach(obj => {
+        try {
+          const ok =
+            ['raw','who','description','date','amount','flow','purpose']
+              .every(k => k in obj);
+          if (!ok) throw 'Missing fields';
+
+          sheet.appendRow([
+            new Date(),
+            obj.raw,
+            obj.who,
+            obj.description,
+            obj.date,
+            obj.amount,
+            obj.flow,
+            obj.purpose
+          ]);
+          result.inserted += 1;
+        } catch (err) {
+          result.failed.push({ raw: obj.raw || '', reason: String(err) });
+        }
+      });
+
+      return jsonOut(result);
+    }
+
+    /* ---------- 2) PREVIEW / AI-COMMIT modes ---------- */
+    const mode = (e.parameter.mode || 'commit').toLowerCase();   // preview | commit
+    const message = body.message || '';
+    const lines = message.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+
+    lines.forEach(line => {
+      try {
+        const ai = JSON.parse(
+          callOpenAI(line)
+            .replace(/^```json\s*/i, '')
+            .replace(/^```\s*/i, '')
+            .replace(/```$/, '')
+            .trim()
+        );
+
+        const ok = ['who','description','date','amount','flow','purpose']
+                   .every(k => k in ai);
+        if (!ok) throw 'Missing fields';
+
+        if (mode === 'preview') {
+          result.preview.push({ raw: line, ...ai });
+        } else {
+          sheet.appendRow([
+            new Date(), line,
+            ai.who, ai.description, ai.date,
+            ai.amount, ai.flow, ai.purpose
+          ]);
+          result.inserted += 1;
+        }
+      } catch (err) {
+        result.failed.push({ raw: line, reason: String(err) });
+      }
+    });
+
+    return jsonOut(result);
+
+  } catch (err) {
+    return jsonOut({ error: String(err) });
+  }
+}
+
+/* helper */
+function jsonOut(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+
+/* =========  OPENAI CALL  ========= */
+function callOpenAI(line) {
+  const prompt = `
+# VAI TRÒ
+Bạn là một người quản lí chi tiêu người Việt Nam. 
+
+Từ dữ liệu nhận được, hãy phân tích chi tiêu qua các bước:
+1. Đây là hoạt động gì?
+2. Phục vụ cho nhu cầu gì?
+3. Viết lại ghi chú lại kết quả gồm các trường thông tin như bên dưới:
+
+# CÁC TRƯỜNG THÔNG TIN
+"who": người thực hiện trong danh sách sau [pony, papa, to-be-defined],
+"description": trình bày diễn giải về hoạt động được ghi chú, hoạt động gì?, phục vụ nhu cầu gì?
+"date": ngày chi tiêu (sử dụng ${Utilities.formatDate(new Date(), "Asia/Bangkok", "dd/MM/yyyy")} nếu không đề cập),
+"amount": số tiền, đơn vị tiền của Việt Nam là VND. Người Việt Nam thường viết tắt nghìn bằng k, triệu bằng tr. Ví dụ 100k là 100000 VND, 1,2tr là 1200000,
+"flow": income hoặc expense,
+"purpose": một trong các loại sau: Necessities, Saving, Play, Give, Education, Salary, Others.
+
+Dữ liệu đầu vào: """${line}"""
+Chỉ trả về JSON thuần túy, không Markdown, không giải thích:
+{
+  "who": "...",
+  "description": "...",
+  "date": "...",
+  "amount": ...,
+  "flow": "...",
+  "purpose": "..."
+}`;
+  
+  const res = UrlFetchApp.fetch("https://api.openai.com/v1/chat/completions", {
+    method: "post",
+    headers: {
+      "Authorization": `Bearer ${OPENAI_API_KEY}`,
+      "Content-Type": "application/json"
+    },
+    payload: JSON.stringify({
+      model: "gpt-4.1-nano",
+      messages: [
+        { role: "system", content: "Bạn là một trợ lý quản lý chi tiêu thông minh" },
+        { role: "user", content: prompt }
+      ],
+      temperature: 0
+    }),
+    muteHttpExceptions: true
+  });
+
+  const data = JSON.parse(res.getContentText());
+
+  if (!(data.choices && data.choices.length && data.choices[0].message)) {
+    throw new Error("Invalid OpenAI response format.");
+  }
+
+  return data.choices[0].message.content.trim();
+}
