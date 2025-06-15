@@ -114,10 +114,14 @@
   const form = document.getElementById("myForm");
 
   form.addEventListener("submit", async (e) => {
-    e.preventDefault();
+    <!-- Stop browser doing a normal POST + page reload -->
+    e.preventDefault();  
 
+    <!-- Read user input-->
     const message = document.getElementById("messageInput").value;
     const resultBox = document.getElementById("result");
+
+    <!-- Visual feedback-->
     resultBox.textContent = "⏳ Processing...";
 
     try {
