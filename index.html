@@ -93,6 +93,16 @@
     .icon {
       font-size: 2rem;
     }
+
+    #previewTable {
+      width:100%; border-collapse:collapse; margin-bottom:1rem;
+    }
+    #previewTable th, #previewTable td {
+      border:1px solid #ddd; padding:4px 6px; font-size:0.9rem;
+    }
+    #previewTable tr.failed { background:#fee; color:#b00; }
+    #confirmBtn { margin-top:0.5rem; }
+
   </style>
 </head>
 <body>
@@ -108,52 +118,92 @@
       <button type="submit">Submit</button>
     </form>
     <p id="result"></p>
+
+    <div id="previewBox" hidden>
+      <h3>Preview</h3>
+      <table id="previewTable"></table>
+      <button id="confirmBtn">✅ Save to Sheet</button>
+    </div>
   </div>
 
- <script>
-  const form = document.getElementById("myForm");
+<script>
+const form        = document.getElementById('myForm');
+const previewBox  = document.getElementById('previewBox');
+const previewTbl  = document.getElementById('previewTable');
+const confirmBtn  = document.getElementById('confirmBtn');
+const resultBox   = document.getElementById('result');
 
-  form.addEventListener("submit", async (e) => {
-    <!-- Stop browser doing a normal POST + page reload -->
-    e.preventDefault();  
+let lastMessage = '';   // cache for the commit step
 
-    <!-- Read user input-->
-    const message = document.getElementById("messageInput").value;
-    const resultBox = document.getElementById("result");
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  lastMessage = document.getElementById('messageInput').value;
+  resultBox.textContent = '⏳ Analyzing…';
+  previewBox.hidden = true;
 
-    <!-- Visual feedback-->
-    resultBox.textContent = "⏳ Processing...";
+  const data = await fetchJSON(lastMessage, 'preview');
+  if (data.error) return showError(data.error);
 
-    try {
-      const response = await fetch(
-        "https://script.google.com/macros/s/AKfycby5EFcI2yF_QdTq0tReQmpByOU5WK5urtrXuYPzV4GFLGbhzrfHYTmGKba4FtsKFQXq/exec",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "text/plain"
-          },
-          body: JSON.stringify({ message }),
-        }
-      );
+  buildPreviewTable(data.preview, data.failed);
+  resultBox.textContent = '👀 Check the preview, then click Save.';
+  previewBox.hidden = false;
+  form.reset();
+});
 
-      const text = await response.text();
+confirmBtn.addEventListener('click', async () => {
+  confirmBtn.disabled = true;
+  resultBox.textContent = '⏳ Saving…';
 
-      if (!response.ok) {
-        throw new Error(`Server returned ${response.status}: ${text}`);
-      }
+  const data = await fetchJSON(lastMessage, 'commit');
+  if (data.error) return showError(data.error);
 
-      resultBox.innerHTML = text
-        .split('\n')
-        .map(line => `<div>✅ ${line}</div>`)
-        .join('');
-    } catch (err) {
-      console.error("Error during fetch:", err);
-      resultBox.textContent = `❌ ${err.message || err}`;
-    }
+  resultBox.textContent =
+    `✅ ${data.inserted} rows added` +
+    (data.failed.length ? `, ❌ ${data.failed.length} failed` : '');
+  previewBox.hidden = true;
+  confirmBtn.disabled = false;
+});
 
-    form.reset();
+async function fetchJSON(message, mode){
+  try{
+    const r = await fetch(
+      `https://script.google.com/macros/s/AKfycbyWVeR9VV00KZ6q9CHiVNACv_0z0dk83yaicHEWyUmqzCUEsp8vJn6Yq3ZLNcbZDkcQ/exec?mode=${mode}`,
+      {
+        method : 'POST',
+        headers: { 'Content-Type':'text/plain' },
+        body   : JSON.stringify({ message })
+      });
+    return await r.json();
+  }catch(err){ return { error:String(err) }; }
+}
+
+function buildPreviewTable(rows, failed){
+  previewTbl.innerHTML = '';           // reset
+
+  // header
+  const header = ['raw','who','description','date','amount','flow','purpose'];
+  previewTbl.insertAdjacentHTML('beforeend',
+    `<tr>${header.map(h=>`<th>${h}</th>`).join('')}</tr>`);
+
+  // valid rows
+  rows.forEach(obj => {
+    previewTbl.insertAdjacentHTML('beforeend',
+      `<tr>${header.map(k=>`<td>${obj[k] ?? ''}</td>`).join('')}</tr>`);
   });
+
+  // failures
+  failed.forEach(({line,reason})=>{
+    previewTbl.insertAdjacentHTML('beforeend',
+      `<tr class="failed"><td colspan="7">❌ ${line} — ${reason}</td></tr>`);
+  });
+}
+
+function showError(msg){
+  resultBox.textContent = '❌ ' + msg;
+  previewBox.hidden = true;
+}
 </script>
+
 
 
 
