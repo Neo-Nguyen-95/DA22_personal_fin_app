@@ -124,6 +124,7 @@
       <table id="previewTable"></table>
       <button id="confirmBtn">✅ Save to Sheet</button>
     </div>
+
   </div>
 
 <script>
@@ -133,41 +134,87 @@ const previewTbl  = document.getElementById('previewTable');
 const confirmBtn  = document.getElementById('confirmBtn');
 const resultBox   = document.getElementById('result');
 
-let lastMessage = '';   // cache for the commit step
+let lastPreview = [];   // keeps the latest parsed objects
 
+/* ---------- FIRST STEP: PREVIEW ---------- */
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
-  lastMessage = document.getElementById('messageInput').value;
+  const rawText = document.getElementById('messageInput').value;
   resultBox.textContent = '⏳ Analyzing…';
   previewBox.hidden = true;
 
-  const data = await fetchJSON(lastMessage, 'preview');
+  const data = await fetchJSON(rawText, 'preview');
   if (data.error) return showError(data.error);
 
-  buildPreviewTable(data.preview, data.failed);
-  resultBox.textContent = '👀 Check the preview, then click Save.';
+  lastPreview = data.preview;                 // cache for later
+  buildPreviewTable(lastPreview, data.failed);
+  resultBox.textContent = '👀 Delete any rows you dislike, then click Save.';
   previewBox.hidden = false;
   form.reset();
 });
 
+/* ---------- SECOND STEP: COMMIT ---------- */
 confirmBtn.addEventListener('click', async () => {
+  // read remaining <tr> elements that still have data-raw attr
+  const rows = [...previewTbl.querySelectorAll('tr[data-raw]')];
+  if (!rows.length) return showError('Nothing to save!');
+
+  const message = rows.map(tr => tr.dataset.raw).join('\n');
+
   confirmBtn.disabled = true;
   resultBox.textContent = '⏳ Saving…';
 
-  const data = await fetchJSON(lastMessage, 'commit');
+  const data = await fetchJSON(message, 'commit');
+  confirmBtn.disabled = false;
+
   if (data.error) return showError(data.error);
 
   resultBox.textContent =
     `✅ ${data.inserted} rows added` +
     (data.failed.length ? `, ❌ ${data.failed.length} failed` : '');
   previewBox.hidden = true;
-  confirmBtn.disabled = false;
 });
 
+/* ---------- HELPER: BUILD TABLE ---------- */
+function buildPreviewTable(rows, failed) {
+  previewTbl.innerHTML = '';
+
+  // only these columns + an Action column
+  const header = ['raw','who','date','amount',''];   // last '' → Action
+  previewTbl.insertAdjacentHTML('beforeend',
+    `<tr>${header.map(h=>`<th>${h}</th>`).join('')}</tr>`);
+
+  // good rows
+  rows.forEach(obj => {
+    const cells = [
+      obj.raw, obj.who, obj.date, obj.amount.toLocaleString('vi-VN')
+    ].map(v => `<td>${v}</td>`).join('');
+    previewTbl.insertAdjacentHTML('beforeend',
+      `<tr data-raw="${obj.raw}">
+         ${cells}
+         <td><button class="del">❌ Delete</button></td>
+       </tr>`);
+  });
+
+  // failures (span the table width)
+  failed.forEach(({line,reason})=>{
+    previewTbl.insertAdjacentHTML('beforeend',
+      `<tr class="failed"><td colspan="5">❌ ${line} — ${reason}</td></tr>`);
+  });
+
+  // wire up delete buttons
+  previewTbl.querySelectorAll('button.del').forEach(btn=>{
+    btn.addEventListener('click', () => {
+      btn.closest('tr').remove();
+    });
+  });
+}
+
+/* ---------- HELPER: FETCH WRAPPER ---------- */
 async function fetchJSON(message, mode){
   try{
     const r = await fetch(
-      `https://script.google.com/macros/s/AKfycbyWVeR9VV00KZ6q9CHiVNACv_0z0dk83yaicHEWyUmqzCUEsp8vJn6Yq3ZLNcbZDkcQ/exec?mode=${mode}`,
+      `https://script.google.com/macros/s/AKfycbzJ-TpCL34DlLX-RHe2IW1zwyc5U7gB4avRfh3hfJAHyKBcMgK5zto3BtoVkFIjSPZx/exec?mode=${mode}`,
       {
         method : 'POST',
         headers: { 'Content-Type':'text/plain' },
@@ -177,27 +224,7 @@ async function fetchJSON(message, mode){
   }catch(err){ return { error:String(err) }; }
 }
 
-function buildPreviewTable(rows, failed){
-  previewTbl.innerHTML = '';           // reset
-
-  // header
-  const header = ['raw','who','description','date','amount','flow','purpose'];
-  previewTbl.insertAdjacentHTML('beforeend',
-    `<tr>${header.map(h=>`<th>${h}</th>`).join('')}</tr>`);
-
-  // valid rows
-  rows.forEach(obj => {
-    previewTbl.insertAdjacentHTML('beforeend',
-      `<tr>${header.map(k=>`<td>${obj[k] ?? ''}</td>`).join('')}</tr>`);
-  });
-
-  // failures
-  failed.forEach(({line,reason})=>{
-    previewTbl.insertAdjacentHTML('beforeend',
-      `<tr class="failed"><td colspan="7">❌ ${line} — ${reason}</td></tr>`);
-  });
-}
-
+/* ---------- HELPER: SHOW ERR ---------- */
 function showError(msg){
   resultBox.textContent = '❌ ' + msg;
   previewBox.hidden = true;
